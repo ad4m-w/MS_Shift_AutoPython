@@ -48,7 +48,7 @@ def continue_script():
     master.quit() 
 
 master = Tk()
-master.geometry("650x400")  
+master.geometry("600x500")  
 master.title("Roster Input Automation by Adam Waszczyszak")
 
 site_selection = StringVar(master)
@@ -107,10 +107,13 @@ entry_password.grid(row=7, column=1, padx=10, pady=5, sticky="w")
 button_submit = Button(master, text="Run Script", command=continue_script, width=15)
 button_submit.grid(row=8, column=0, columnspan=2, pady=20, padx=20, sticky="nsew")
 
+progressbar = ttk.Progressbar(master, orient="horizontal", length=400, mode="determinate", maximum=100)
+progressbar.grid(row=9, column=0, columnspan=2, padx=10, pady=10, sticky="")
 
-# Main Loop
+# Start of Main Loop
 master.mainloop()
 
+# Variables for script, done like this for compatibility 
 website = entry_url.get()
 sitetype = site_selection.get()
 csvpath = csv_file_path
@@ -120,6 +123,7 @@ pw = entry_password.get()
 
 # Import CSV file
 df = pd.read_csv(csv_file_path, encoding=enc)
+pCount = len(df.index)  
 
 if getattr(sys, 'frozen', False):
     bundle_dir = Path(sys._MEIPASS) 
@@ -170,14 +174,17 @@ try:
     browser.visit(url)
     sleep(2) 
 
+    pStep = 0
+    loopIteration = 0
     for index, row in df.iterrows():
         print("Looping CSV...")
         department = row['Department']
         fname = row['First Name']
         lname = row['Last Name']
+        position = row['Position']
+        username = row['Username']
+        pWord = row['Password']
         print(f"Department: {department}, First Name: {fname}, Last Name: {lname}")
-
-
 
         browser.visit(url)
         sleep(2) 
@@ -215,25 +222,42 @@ try:
                                 add_new_user_option.click()
                                 print(f"Selected: {add_new_user_option.text}")
             
-                                sleep(1)
+                                sleep(2)
 
                                 iframe = WebDriverWait(browser.driver, 10).until(
                                     EC.presence_of_element_located((By.ID, "A_P_iframe"))
                                 )
                                 browser.driver.switch_to.frame(iframe)
-            
 
                                 try:
-                                    firstname_field = WebDriverWait(browser.driver, 10).until(
+                                    firstname_field = WebDriverWait(browser.driver, 20).until(
                                         EC.visibility_of_element_located((By.NAME, 'firstname'))
                                     )
                                     lastname_field = WebDriverWait(browser.driver, 10).until(
                                         EC.visibility_of_element_located((By.NAME, 'lastname'))
                                     )
-                
+                                    position_field = WebDriverWait(browser.driver, 10).until(
+                                        EC.visibility_of_element_located((By.NAME, 'position'))
+                                    ) 
+                                    username_field = WebDriverWait(browser.driver, 10).until(
+                                        EC.visibility_of_element_located((By.NAME, 'Login'))
+                                    )
+                                    pWord_field = WebDriverWait(browser.driver, 10).until(
+                                        EC.visibility_of_element_located((By.NAME, 'Password'))
+                                    )
+
                                     if firstname_field and lastname_field:
                                         ActionChains(browser.driver).move_to_element(firstname_field).click().send_keys(fname).perform()
                                         ActionChains(browser.driver).move_to_element(lastname_field).click().send_keys(lname).perform()
+                                    # Added a check to see if this information exists in the CSV. Prevents 'nan' from being entered into the field
+                                    if(pd.notna(position)): 
+                                        ActionChains(browser.driver).move_to_element(position_field).click().send_keys(position).perform()
+                                    # Nested IF statements... I know... This is too delicate to touch for now.
+                                    if(pd.notna(username)):
+                                        if(pd.notna(pWord)):
+                                            ActionChains(browser.driver).move_to_element(username_field).click().send_keys(username).perform()
+                                            ActionChains(browser.driver).move_to_element(pWord_field).click().send_keys(pWord).perform()
+
                                         print(f"Filled First Name: {fname}, Last Name: {lname}")
                                     else:
                                         print("First Name or Last Name field not found inside the iframe.")
@@ -246,18 +270,24 @@ try:
                                     EC.element_to_be_clickable((By.NAME, 'SaveAssociate'))
                                 )
                                 save_button.click()
-                                print(f"Saved new user: {fname} {lname}")
+                                alert = browser.get_alert()
+
+                                # Handle the alert
+                                if alert:
+                                    print("Alert exception handled:", alert.text)
+                                    alert.accept()  
+                                else:
+                                    print(f"Saved new user: {fname} {lname}")
             
                                 browser.visit(url)
                                 sleep(2)
                                 break # I swear if this loop breaks wrong I will break
                             else:
                                 print("Add New User option not found.")
-                                   
+                                  
+                                break
                         else:
                             print("Users dropdown not found.")
-                    else:
-                        print(f"{department} not found in options.")
             
                 else:
                     print("Department options not found.")
@@ -265,11 +295,14 @@ try:
             print("Department dropdown not found.")
 
         print("Returning to the department selection for the next user...")
+        print("Continuing to next department...\n")
+        loopIteration += 1
+        pStep = ((loopIteration/ pCount) * 100)
+        progressbar['value'] = pStep
+        master.update_idletasks()
         browser.reload()
         sleep(2)
 
-        print("Continuing to next department...\n")
-        sleep(2)
 
 except Exception as e:
     print(f"Error during script execution: {e}")
