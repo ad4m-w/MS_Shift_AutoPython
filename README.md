@@ -5,5 +5,6 @@
 <p align="center">Python script automating creation of user accounts</p>
 
 <hr>
+
 1.   Compile the code using Python
 2.   (Optionally) run the compiled EXE
