@@ -5,6 +5,7 @@
 <p align="center">Python script automating creation of user accounts</p>
 
 <hr>
-Collection of Python Scrips written to help process' at MS Shift
 1.   Compile the code using Python
 2.   (Optionally) run the compiled EXE
+
+Collection of Python Scripts written to help process' at MS Shift
