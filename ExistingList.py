@@ -5,6 +5,7 @@ system("title " + "Written By Adam Waszczyszak")
 import os
 import sys
 import tkinter
+import random
 import pandas as pd
 from pathlib import Path
 from splinter import Browser
@@ -47,21 +48,33 @@ def continue_script():
     print("Script is continuing...")
     master.quit() 
 
+def centerWindow(window):
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width - 500) // 2
+    y = (screen_height - 500) // 2
+    window.geometry(f"{500}x{500}+{x}+{y}")
+
 master = Tk()
-master.geometry("600x500")  
+master.geometry("500x500")  
+centerWindow(master)
 master.title("Roster Input Automation by Adam Waszczyszak")
 
 site_selection = StringVar(master)
 
+# Formatted for easier visualization 
 values = [
     ("Sec-2", "1"),
     ("Mi3", "2"),
     ("Mi-ES", "3"),
     ("MVW-2", "4"),
-    ("demo4", "5")
+    ("demo4", "5"),
+    ("Sec-6", "6"),
+    ("HW", "7")
 ]
 
-label_site = Label(master, text="Select Site:")
+# GUI 
+label_site = Label(master, text="Select Site Type:")
 label_site.grid(row=0, column=0, pady=10, padx=20, sticky="w")
 
 site_combobox = ttk.Combobox(master, values=[item[0] for item in values], textvariable=site_selection, state="readonly", width=20)
@@ -88,7 +101,7 @@ button_url.grid(row=4, column=0, columnspan=2, pady=10, padx=20, sticky="nsew")
 label_encoding = Label(master, text="Select CSV Encoding:")
 label_encoding.grid(row=5, column=0, pady=10, padx=20, sticky="w")
 
-encoding_options = ["ISO-8859-1", "UTF-8", "Windows-1252", "ASCII"]
+encoding_options = ["UTF-8", "ISO-8859-1", "Windows-1252", "ASCII"]
 selected_encoding = StringVar(master)  
 selected_encoding.set(encoding_options[0])  
 encoding_combobox = ttk.Combobox(master, values=encoding_options, textvariable=selected_encoding, state="readonly", width=20)
@@ -140,6 +153,8 @@ if not chromedriver_path.exists():
 options = Options()
 options.binary_location = chrome_binary
 options.add_experimental_option('excludeSwitches', ['enable-logging'])
+# Headless Mode 
+options.add_argument("--headless")  
 service = Service(str(chromedriver_path))
 browser = Browser('chrome', service=service, options=options)
 
@@ -150,7 +165,7 @@ try:
     username = uname
     password = pw
 
-    if(sitetype == 'Mi3'):
+    if((sitetype == 'Mi3') or (sitetype == 'Mi-ES')):
         browser.find_by_name('MsSSOBtn').click()
         browser.fill('pf.username', username)
         browser.fill('pf.pass', password)
@@ -170,6 +185,12 @@ try:
         url ='https://msshift-mi-es.com/d/Admin/Permission/AddNewDept'
     elif(sitetype == 'demo4'):
         url ='https://msshift-demo-4.com/d/Admin/Permission/AddNewDept'
+    elif(sitetype == 'Sec-6'):
+        url = 'https://msshift-security-6.com/d/Admin/Permission/AddNewDept'
+    elif(sitetype == 'HW'):
+        url = 'https://msshift-hw.com/d/Admin/Permission/AddNewDept'
+    elif(sitetype == 'MVW-2'):
+        url = 'https://msshift-mvw-2.com/d/Admin/Permission/AddNewDept'
 
     browser.visit(url)
     sleep(2) 
@@ -183,8 +204,11 @@ try:
         lname = row['Last Name']
         position = row['Position']
         username = row['Username']
-        pWord = row['Password']
+        generatedPassword = row['Password']
         print(f"Department: {department}, First Name: {fname}, Last Name: {lname}")
+
+        # Random Number for password generation
+        randomNumber = random.randint(10000, 99999)
 
         browser.visit(url)
         sleep(2) 
@@ -242,7 +266,7 @@ try:
                                     username_field = WebDriverWait(browser.driver, 10).until(
                                         EC.visibility_of_element_located((By.NAME, 'Login'))
                                     )
-                                    pWord_field = WebDriverWait(browser.driver, 10).until(
+                                    generatedPassword_field = WebDriverWait(browser.driver, 10).until(
                                         EC.visibility_of_element_located((By.NAME, 'Password'))
                                     )
 
@@ -254,10 +278,17 @@ try:
                                         ActionChains(browser.driver).move_to_element(position_field).click().send_keys(position).perform()
                                     # Nested IF statements... I know... This is too delicate to touch for now.
                                     if(pd.notna(username)):
-                                        if(pd.notna(pWord)):
-                                            ActionChains(browser.driver).move_to_element(username_field).click().send_keys(username).perform()
-                                            ActionChains(browser.driver).move_to_element(pWord_field).click().send_keys(pWord).perform()
+                                        ActionChains(browser.driver).move_to_element(username_field).click().send_keys(username).perform()
 
+                                        if(pd.notna(generatedPassword)):                                           
+                                            ActionChains(browser.driver).move_to_element(generatedPassword_field).click().send_keys(generatedPassword).perform()
+                                        else:
+                                            # Generate Password and output user to the Accounts.txt file.
+                                            generatedPassword = "Security" + str(randomNumber)
+                                            ActionChains(browser.driver).move_to_element(generatedPassword_field).click().send_keys(generatedPassword).perform()
+                                            print("Username: " + username + " Password: " + generatedPassword + "\n")
+                                            with open("Accounts.txt", "a") as f:
+                                                print(f"Username: {username} \nPassword: {generatedPassword} \n", file=f)
                                         print(f"Filled First Name: {fname}, Last Name: {lname}")
                                     else:
                                         print("First Name or Last Name field not found inside the iframe.")
@@ -275,10 +306,12 @@ try:
                                 # Handle the alert
                                 if alert:
                                     print("Alert exception handled:", alert.text)
+                                    with open("Log.txt", "a") as f:
+                                        print(f"Alert exception handled:", alert.text, file=f)
                                     alert.accept()  
                                 else:
-                                    print(f"Saved new user: {fname} {lname}")
-            
+                                    with open("Log.txt", "a") as f:
+                                        print(f"Saved new user: {fname} {lname}", file=f)
                                 browser.visit(url)
                                 sleep(2)
                                 break # I swear if this loop breaks wrong I will break
@@ -288,7 +321,6 @@ try:
                                 break
                         else:
                             print("Users dropdown not found.")
-            
                 else:
                     print("Department options not found.")
         else:
