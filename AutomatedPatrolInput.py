@@ -58,7 +58,7 @@ def centerWindow(window):
 master = Tk()
 master.geometry("500x500")  
 centerWindow(master)
-master.title("Roster Input Automation by Adam Waszczyszak")
+master.title("adamwasz.com")
 
 site_selection = StringVar(master)
 
@@ -155,7 +155,7 @@ options.binary_location = chrome_binary
 options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
 # Headless Mode 
-#options.add_argument("--headless")  
+options.add_argument("--headless")  
 
 service = Service(str(chromedriver_path))
 browser = Browser('chrome', service=service, options=options)
@@ -177,7 +177,7 @@ try:
         browser.fill('username', password)
         browser.find_by_name('Submit').click()
 
-    print("\nLogged-in successfully...")
+    print("\nLogged into " + sitetype + " successfully.")
 
     if(sitetype == 'Sec-2'):
         url = 'https://msshift-security-2.com/d/Admin/CategoryLP/AddPoint/PointTypeList_'
@@ -195,7 +195,6 @@ try:
         url = 'https://msshift-mvw-2.com/d/Admin/CategoryLP/AddPoint/PointTypeList_'
 
     browser.visit(url)
-    sleep(2) 
 
     pStep = 0
     loopIteration = 0
@@ -206,8 +205,10 @@ try:
         barcode = row['Barcode']
         print(f"Route: {route}, Point: {point}")
 
+        # Random Number for password generation
+        randomNumber = random.randint(10000000, 99999999)
+
         browser.visit(url)
-        sleep(2) 
 
         print("Searching for Patrol Route dropdown")
         dropdown = browser.find_by_id('PatrolName')
@@ -245,9 +246,17 @@ try:
                                 )
 
                                 if point_field:
-                                    ActionChains(browser.driver).move_to_element(point_field).click().send_keys(point).perform()
+                                    if pd.notna(point):
+                                        ActionChains(browser.driver).move_to_element(point_field).click().send_keys(point).perform()
+                                    else:
+                                        break
                                     if pd.notna(barcode):
-                                        ActionChains(browser.driver).move_to_element(barcode_field).click().send_keys(barcode).perform()
+                                        ActionChains(browser.driver).move_to_element(barcode_field).click().send_keys(int(barcode)).perform()
+                                    else:
+                                        # Input a random number into the barcode number as a placeholder. 
+                                        # If there is no number in the barcode field, we cannot edit it from the mobile app (for NFC and Beacon setup).
+                                        ActionChains(browser.driver).move_to_element(barcode_field).click().send_keys(randomNumber).perform()
+
 
                             except Exception as e:
                                 print(f"Error filling fields in iframe: {e}")
@@ -263,27 +272,24 @@ try:
                             # Handle the alert
                             if alert:
                                 print("Alert exception handled:", alert.text)
-                                with open("Log.txt", "a") as f:
+                                with open("Patrol Point Log.txt", "a") as f:
                                     print(f"Alert exception handled:", alert.text, file=f)
                                 alert.accept()  
                             else:
-                                with open("Log.txt", "a") as f:
-                                    print(f"Saved new patrol point: {route} {point}", file=f)
+                                with open("Patrol Point Log.txt", "a") as f:
+                                    print(f"Saved new patrol point: {route} {point} {barcode}", file=f)
                             browser.visit(url)
-                            sleep(2)
+                            sleep(1)
                             break
                         else:
                             print("Add new patrol point option not found.")
                                   
                             break
-        print("Continuing to next route...\n")
         loopIteration += 1
         pStep = ((loopIteration/ pCount) * 100)
         progressbar['value'] = pStep
         master.update_idletasks()
         browser.reload()
-        sleep(2)
-
 
 except Exception as e:
     print(f"Error during script execution: {e}")
