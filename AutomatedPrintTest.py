@@ -32,7 +32,7 @@ def kill_adobe():
                 print(f"Killed process {proc.info['name']} with PID {proc.info['pid']}")
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
-sw = True
+sw = False
 def select_printer(printer_name):
     options = Options()
     options.add_experimental_option("detach", True)
