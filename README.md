@@ -1,8 +1,8 @@
 <p align="center"><img src="https://raw.githubusercontent.com/ad4m-w/ad4m-w.github.io/refs/heads/main/profile.png" alt="ad4m profile picture"></p>
 
-<h1 align="center">MS Shift Python Scripts</h1>
+<h1 align="center">Python Scripts</h1>
 
-<p align="center">Python script automating process' at MS Shift</p>
+<p align="center">Python script automating process' at work.</p>
 
 <hr>
 
